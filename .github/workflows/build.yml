@@ -23,11 +23,19 @@ jobs:
           export PATH=/opt/arm-gcc/bin:$PATH
           cd DAPLink
           progen generate -t gcc_arm -p stm32f103xb_stm32f103rb_if
-          make -C projectfiles/make_gcc_arm/stm32f103xb_stm32f103rb_if all
-          ls -la projectfiles/make_gcc_arm/stm32f103xb_stm32f103rb_if/build/
+          echo "--- makefiles found ---"
+          find . -maxdepth 5 -name Makefile | head -10
+          MKDIR=$(dirname "$(find . -maxdepth 6 -name Makefile -path '*stm32f103rb*' | head -1)")
+          echo "building in: $MKDIR"
+          make -C "$MKDIR" all
+          echo "--- built artifacts ---"
+          find . -name '*_crc.bin' -o -name '*_crc.hex' | head -10
+          mkdir -p ../out
+          find . \( -name '*_crc.bin' -o -name '*_crc.hex' \) -exec cp {} ../out/ \;
+          ls -la ../out/
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: daplink-f103-if
-          path: DAPLink/projectfiles/make_gcc_arm/stm32f103xb_stm32f103rb_if/build/*
+          path: out/*
           if-no-files-found: error
