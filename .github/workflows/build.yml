@@ -1,0 +1,33 @@
+name: build-daplink-f103-interface
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Clone DAPLink v0258 with submodules
+        run: |
+          git clone --depth 1 --branch v0258 --recurse-submodules --shallow-submodules https://github.com/ARMmbed/DAPLink.git
+          cd DAPLink && git submodule status | head -5
+      - name: Install python deps
+        run: pip3 install -r DAPLink/requirements.txt
+      - name: Install arm-none-eabi-gcc 10.3
+        run: |
+          curl -sS -O -L https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.07/gcc-arm-none-eabi-10.3-2021.07-x86_64-linux.tar.bz2
+          sudo mkdir -p /opt/arm-gcc
+          sudo tar jxf gcc-arm-none-eabi-10.3-2021.07-x86_64-linux.tar.bz2 -C /opt/arm-gcc --strip-components 1
+          /opt/arm-gcc/bin/arm-none-eabi-gcc --version | head -1
+      - name: Generate and build stm32f103xb_stm32f103rb_if
+        run: |
+          export PATH=/opt/arm-gcc/bin:$PATH
+          cd DAPLink
+          progen generate -t gcc_arm -p stm32f103xb_stm32f103rb_if
+          make -C projectfiles/make_gcc_arm/stm32f103xb_stm32f103rb_if all
+          ls -la projectfiles/make_gcc_arm/stm32f103xb_stm32f103rb_if/build/
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daplink-f103-if
+          path: DAPLink/projectfiles/make_gcc_arm/stm32f103xb_stm32f103rb_if/build/*
+          if-no-files-found: error
